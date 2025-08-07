@@ -15,5 +15,5 @@ const routes = (handler) => [
         handler: handler.deleteAuthHandler,
     },
 ];
-
+// export
 module.exports = routes;
