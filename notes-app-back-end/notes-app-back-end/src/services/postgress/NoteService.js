@@ -6,8 +6,9 @@ const NotFoundError = require('../../execptions/NotFoundError');
 const AuthorizationError = require('../../execptions/AuthorizationError');
 
 class NoteService{
-    constructor(){
+    constructor(collaborationService){
         this.__pool = new Pool();
+        this._collaborationService = collaborationService;
     }
 
     async addNote({title, body, tags, owner}){
@@ -32,7 +33,10 @@ class NoteService{
 
     async getNotes(owner){
         const query = {
-            text: 'SELECT * FROM notes WHERE owner = $1',
+            text: `SELECT notes.* FROM notes
+                    LEFT JOIN collaborations ON collaborations.note_id = notes.id
+                    WHERE notes.owner = $1 OR collaborations.user_id = $1
+                    GROUP BY notes.id`,
             values: [owner],
         };
         const result = await this.__pool.query(query);
@@ -41,7 +45,10 @@ class NoteService{
 
     async getNoteById(id){
         const query = {
-            text: 'SELECT * from notes WHERE id = $1',
+            text: `SELECT notes.*, users.username
+            FROM notes
+            LEFT JOIN users on users.id = notes.owner
+            WHERE notes.id = $1`,
             values: [id],
         }
 
@@ -98,6 +105,21 @@ class NoteService{
 
         if (note.owner !== owner){
             throw new AuthorizationError("Anda tidak berhak mengakses resource ini");
+        }
+    }
+
+    async verifyNoteAccess(noteId, userId){
+        try {
+            await this.verifyNoteOwner(noteId, userId);
+        } catch (error){
+            if (error instanceof NotFoundError){
+                throw error;
+            }
+            try{
+                await this._collaborationService.verifyCollaborator(noteId, userId);
+            } catch{
+                throw error;
+            }
         }
     }
 }
