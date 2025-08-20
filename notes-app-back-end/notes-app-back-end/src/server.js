@@ -25,6 +25,11 @@ const collaborations = require('./api/collaborations');
 const CollaborationsService = require('./services/postgress/CollaborationService');
 const CollaborationsValidator = require('./validator/collaborations');
 
+//Exports
+const _exports = require("./api/exports");
+const ProducerService = require("./services/rabbitmq/ProducerService");
+const ExportsValidator = require("./validator/exports");
+
 const init = async () => {
   const collaborationsService = new CollaborationsService;
   const noteService = new NoteService(collaborationsService);
@@ -94,6 +99,13 @@ const init = async () => {
           collaborationsService,
           noteService,
           validator: CollaborationsValidator,
+        }
+      },
+      {
+        plugin: _exports,
+        options: {
+          service: ProducerService,
+          validator: ExportsValidator,
         }
       }
   ]);
